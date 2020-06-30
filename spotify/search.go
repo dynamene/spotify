@@ -79,10 +79,6 @@ func FindTrack(track SingleTrack) string {
 			score++
 		}
 
-		fmt.Println("Track: ", track.Title)
-		fmt.Println("Score: ", score)
-		fmt.Println("=========================END=========================")
-
 		if score >= 4 {
 			trackID = v.URI
 			break
