@@ -3,7 +3,6 @@ package spotify
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"math"
@@ -15,7 +14,7 @@ import (
 )
 
 // GetPlaylist returns playlist information from playlist link
-func GetPlaylist(playlistLink string) (map[string]interface{}, error) {
+func GetPlaylist(playlistLink string) map[string]interface{} {
 	s := strings.Split(playlistLink, "/")
 	playlistID := strings.Split(s[len(s)-1], "?")[0]
 	playlistURL := fmt.Sprintf("%s/v1/playlists/%s", baseURL, playlistID)
@@ -25,14 +24,22 @@ func GetPlaylist(playlistLink string) (map[string]interface{}, error) {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return map[string]interface{}{}, err
+		return map[string]interface{}{
+			"isValid":  false,
+			"playlist": map[string]interface{}{},
+			"message":  "Invalid link",
+		}
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		accessToken, err := refreshToken(os.Getenv("SPOTIFY_CLIENT_ID"), os.Getenv("SPOTIFY_CLIENT_SECRET"), os.Getenv("SPOTIFY_REFRESH_TOKEN"))
 		if err != nil {
-			return map[string]interface{}{}, err
+			return map[string]interface{}{
+				"isValid":  false,
+				"playlist": map[string]interface{}{},
+				"message":  "Invalid link",
+			}
 		}
 
 		os.Setenv("SPOTIFY_ACCESS_TOKEN", accessToken)
@@ -47,7 +54,11 @@ func GetPlaylist(playlistLink string) (map[string]interface{}, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return map[string]interface{}{}, errors.New("Invalid playlist link")
+		return map[string]interface{}{
+			"isValid":  false,
+			"playlist": map[string]interface{}{},
+			"message":  "Invalid link",
+		}
 	}
 
 	body, _ := ioutil.ReadAll(resp.Body)
@@ -55,7 +66,19 @@ func GetPlaylist(playlistLink string) (map[string]interface{}, error) {
 	playlist := Playlist{}
 	tracks := []SingleTrack{}
 	if err = json.Unmarshal(body, &playlist); err != nil {
-		return map[string]interface{}{}, errors.New("Invalid playlist link")
+		return map[string]interface{}{
+			"isValid":  false,
+			"playlist": map[string]interface{}{},
+			"message":  "Invalid link",
+		}
+	}
+
+	if playlist.Owner.DisplayName == "Spotify" {
+		return map[string]interface{}{
+			"isValid":  false,
+			"playlist": map[string]interface{}{},
+			"message":  "Can't use Spotify auto-generated playlists.",
+		}
 	}
 
 	if len(playlist.Tracks.Items) > 20 {
@@ -87,7 +110,10 @@ func GetPlaylist(playlistLink string) (map[string]interface{}, error) {
 		"numTracks":     len(tracks),
 	}
 
-	return playlistInfo, nil
+	return map[string]interface{}{
+		"isValid":  true,
+		"playlist": playlistInfo,
+	}
 }
 
 // CreatePlaylist creates a playlist

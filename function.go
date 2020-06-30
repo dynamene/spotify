@@ -15,22 +15,9 @@ func Spotify(resp http.ResponseWriter, req *http.Request) {
 	switch req.Method {
 	case "GET":
 		link, _ := req.URL.Query()["link"]
-		playlist, err := spotify.GetPlaylist(link[0])
+		response := spotify.GetPlaylist(link[0])
 		resp.WriteHeader(http.StatusOK)
-		if err != nil {
-			data := map[string]interface{}{
-				"playlist": map[string]string{},
-				"isValid":  false,
-			}
-			json.NewEncoder(resp).Encode(data)
-			return
-		}
-
-		data := map[string]interface{}{
-			"playlist": playlist,
-			"isValid":  true,
-		}
-		json.NewEncoder(resp).Encode(data)
+		json.NewEncoder(resp).Encode(response)
 		return
 	case "POST":
 		var data struct {
